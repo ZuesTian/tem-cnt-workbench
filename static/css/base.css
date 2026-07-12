@@ -1,0 +1,153 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--color-app);
+}
+
+body {
+  margin: 0;
+  color: var(--color-text);
+  background: var(--color-app);
+  font: 13px/1.5 var(--font-sans);
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+button,
+summary,
+select {
+  cursor: pointer;
+}
+button:disabled,
+input:disabled,
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
+button,
+input,
+select {
+  min-height: var(--control-height);
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+summary:focus-visible,
+canvas:focus-visible,
+[tabindex]:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-focus), transparent 58%);
+  outline-offset: 2px;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin-top: 0;
+}
+h1,
+h2,
+h3 {
+  color: var(--color-text);
+  line-height: 1.2;
+}
+h1 {
+  margin-bottom: 0;
+  font-size: 17px;
+  font-weight: 720;
+}
+h2 {
+  margin-bottom: 0;
+  font-size: 15px;
+  font-weight: 700;
+}
+h3 {
+  font-size: 14px;
+}
+p {
+  color: var(--color-text-secondary);
+}
+a {
+  color: var(--color-accent);
+}
+hr {
+  width: 100%;
+  margin: var(--space-3) 0;
+  border: 0;
+  border-top: 1px solid var(--color-border);
+}
+
+input[type="text"],
+input[type="number"],
+select {
+  width: 100%;
+  border: 1px solid var(--color-border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: 8px 10px;
+  transition:
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast);
+}
+
+input[type="text"]:focus,
+input[type="number"]:focus,
+select:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px var(--color-accent-soft);
+  outline: 0;
+}
+
+input[type="range"] {
+  width: 100%;
+  accent-color: var(--color-accent);
+}
+input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--color-accent);
+}
+
+table {
+  border-collapse: collapse;
+  width: 100%;
+}
+th {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+  font-weight: 650;
+  text-align: left;
+}
+td {
+  color: var(--color-text);
+}
+
+.sr-only {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+[hidden] {
+  display: none !important;
+}

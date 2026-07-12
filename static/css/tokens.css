@@ -1,0 +1,106 @@
+:root {
+  color-scheme: light;
+  --font-sans:
+    Inter, "Segoe UI", "Microsoft YaHei UI", "PingFang SC", system-ui,
+    sans-serif;
+  --font-mono: "Cascadia Code", "SFMono-Regular", Consolas, monospace;
+
+  --color-app: #e9efed;
+  --color-surface: #ffffff;
+  --color-surface-soft: #f4f7f6;
+  --color-surface-raised: #fbfcfc;
+  --color-canvas: #111715;
+  --color-border: #d5dfdc;
+  --color-border-strong: #b8c8c4;
+  --color-text: #17231f;
+  --color-text-secondary: #40534d;
+  --color-text-muted: #5c6f69;
+  --color-accent: #0b7168;
+  --color-accent-strong: #075a54;
+  --color-accent-soft: #d9efeb;
+  --color-accent-faint: #eef8f6;
+  --color-highlight: #b15108;
+  --color-highlight-soft: #fff0df;
+  --color-danger: #a1282b;
+  --color-danger-soft: #fdebec;
+  --color-success: #247443;
+  --color-success-soft: #e5f4ea;
+  --color-focus: #087f75;
+  --color-overlay: rgb(10 20 17 / 64%);
+
+  --viewer-box: #35a49a;
+  --viewer-box-selected: #f0a33a;
+  --viewer-measure: #61c6b9;
+  --viewer-measure-review: #f0a33a;
+  --viewer-roi: #72a7f5;
+  --viewer-stage-glow: rgb(55 68 63 / 28%);
+  --viewer-instruction-border: #6b827b;
+  --viewer-instruction-text: #edf7f4;
+  --viewer-instruction-background: rgb(18 30 26 / 92%);
+  --viewer-instruction-shadow: 0 8px 22px rgb(0 0 0 / 24%);
+  --viewer-instruction-mark-text: #102822;
+  --viewer-instruction-mark-background: #8bd6cc;
+  --viewer-instruction-pending-border: #d99a46;
+  --viewer-instruction-pending-text: #301b05;
+  --viewer-instruction-pending-background: #f4ba6e;
+  --viewer-drop-border: #63736e;
+  --viewer-drop-text: #d8e3df;
+  --viewer-drop-background: rgb(27 37 33 / 72%);
+  --viewer-drop-hover-border: #82c7bf;
+  --viewer-drop-hover-background: rgb(32 52 46 / 88%);
+  --viewer-drop-mark: #9ad4cd;
+  --viewer-drop-muted: #adbbb6;
+  --viewer-drop-subtle: #8d9b96;
+  --viewer-toolbar-border: #46534f;
+  --viewer-toolbar-background: rgb(24 33 30 / 94%);
+  --viewer-toolbar-shadow: 0 10px 26px rgb(0 0 0 / 30%);
+  --viewer-toolbar-text: #c8d4d0;
+  --viewer-toolbar-active-text: #ffffff;
+  --viewer-toolbar-hover: #33443f;
+  --viewer-toolbar-active-ring: #568078;
+  --viewer-toolbar-key: #aebdb8;
+  --viewer-overlay-background: rgb(10 18 15 / 72%);
+  --viewer-overlay-text: #ffffff;
+  --viewer-overlay-muted: #c8d4d0;
+  --viewer-spinner-track: #53645e;
+  --viewer-spinner-accent: #79c7bd;
+  --viewer-label-background: rgb(8 24 20 / 82%);
+  --viewer-label-text: #f5fbf9;
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --space-10: 40px;
+
+  --radius-sm: 5px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 18px;
+  --control-height: 40px;
+  --shadow-sm: 0 1px 2px rgb(13 34 28 / 7%);
+  --shadow-md: 0 10px 30px rgb(13 34 28 / 12%);
+  --shadow-lg: 0 22px 60px rgb(5 20 16 / 22%);
+  --transition-fast: 140ms ease;
+  --transition-normal: 180ms ease;
+
+  --z-header: 20;
+  --z-drawer: 35;
+  --z-toolbar: 10;
+  --z-overlay: 50;
+  --z-toast: 60;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}

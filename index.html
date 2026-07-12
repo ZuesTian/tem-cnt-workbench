@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="color-scheme" content="light" />
+    <meta
+      name="description"
+      content="TEM 碳纳米管检测、测量与可复现导出工作台"
+    />
+    <title>TEM CNT Analyzer · 科研分析工作台</title>
+    <link rel="stylesheet" href="./static/css/tokens.css" />
+    <link rel="stylesheet" href="./static/css/base.css" />
+    <link rel="stylesheet" href="./static/css/layout.css" />
+    <link rel="stylesheet" href="./static/css/components.css" />
+    <link rel="stylesheet" href="./static/css/viewer.css" />
+    <link rel="stylesheet" href="./static/css/responsive.css" />
+  </head>
+  <body>
+    <div id="app-shell" class="app-shell">
+      <header class="app-header">
+        <a class="brand" href="./" aria-label="TEM CNT Analyzer 首页">
+          <span class="brand-mark" aria-hidden="true">CNT</span>
+          <span class="brand-copy">
+            <strong>TEM CNT Analyzer</strong>
+            <small>云端科研图像分析</small>
+          </span>
+        </a>
+
+        <div class="header-session" id="session-state">
+          <span class="session-dot" aria-hidden="true"></span>
+          <span id="header-status">正在连接分析服务…</span>
+        </div>
+
+        <div class="header-actions">
+          <button
+            id="btn-report"
+            class="button button-quiet"
+            type="button"
+            disabled
+          >
+            分析报告
+          </button>
+          <button
+            id="btn-export-csv"
+            class="button button-secondary"
+            type="button"
+            disabled
+          >
+            导出 CSV
+          </button>
+          <button id="btn-open" class="button button-primary" type="button">
+            导入图像
+          </button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <aside class="workflow-panel" aria-label="分析流程">
+          <div class="panel-heading workflow-heading">
+            <div>
+              <span class="eyebrow">WORKFLOW</span>
+              <h1>分析流程</h1>
+            </div>
+            <span id="workflow-progress" class="progress-badge">0 / 3</span>
+          </div>
+
+          <ol class="workflow-list">
+            <li id="step-image" class="workflow-step is-active">
+              <div class="step-rail"><span>1</span></div>
+              <div class="step-content">
+                <div class="step-title-row">
+                  <div>
+                    <span class="step-kicker">输入</span>
+                    <h2>载入 TEM 图像</h2>
+                  </div>
+                  <span id="step-image-state" class="step-state">当前步骤</span>
+                </div>
+                <p class="step-description">
+                  图像会发送到云端临时处理，不会持久保存。
+                </p>
+                <button
+                  id="btn-open-secondary"
+                  class="button button-secondary button-block"
+                  type="button"
+                >
+                  选择图像文件
+                </button>
+                <div id="image-summary" class="file-summary" hidden>
+                  <span class="file-thumb" aria-hidden="true">TEM</span>
+                  <span class="file-copy"
+                    ><strong id="image-filename">—</strong
+                    ><small id="image-dimensions">—</small></span
+                  >
+                </div>
+              </div>
+            </li>
+
+            <li id="step-scale" class="workflow-step is-locked">
+              <div class="step-rail"><span>2</span></div>
+              <div class="step-content">
+                <div class="step-title-row">
+                  <div>
+                    <span class="step-kicker">校准</span>
+                    <h2>设置比例尺</h2>
+                  </div>
+                  <span id="step-scale-state" class="step-state">等待图像</span>
+                </div>
+                <p class="step-description">
+                  先确认图中标尺长度，再将像素换算为纳米。
+                </p>
+                <div
+                  class="calibration-methods"
+                  role="group"
+                  aria-label="获取比例尺像素长度"
+                >
+                  <button
+                    id="btn-auto-scale"
+                    class="button button-secondary calibration-method"
+                    type="button"
+                    disabled
+                  >
+                    <span>自动识别</span><small>定位水平标尺</small>
+                  </button>
+                  <button
+                    id="btn-set-scale"
+                    class="button button-secondary calibration-method"
+                    type="button"
+                    aria-pressed="false"
+                    disabled
+                  >
+                    <span>图上取点</span><small>两点或拖线</small>
+                  </button>
+                </div>
+                <p class="calibration-hint">
+                  自动识别后请核对橙色候选框；也可在图上点击标尺两端，或按住左键直接拖线。
+                </p>
+                <div class="scale-grid">
+                  <label class="field"
+                    ><span>实际长度</span
+                    ><span class="input-with-unit"
+                      ><input
+                        id="scale-nm"
+                        type="number"
+                        value="20"
+                        min="0.1"
+                        step="0.1"
+                        inputmode="decimal"
+                      /><b>nm</b></span
+                    ></label
+                  >
+                  <label class="field"
+                    ><span>像素长度</span
+                    ><span class="input-with-unit"
+                      ><input
+                        id="scale-px"
+                        type="number"
+                        min="0.1"
+                        step="0.1"
+                        inputmode="decimal"
+                        placeholder="—"
+                      /><b>px</b></span
+                    ></label
+                  >
+                </div>
+                <div id="scale-ratio-preview" class="scale-ratio-preview">
+                  等待获取像素长度
+                </div>
+                <button
+                  id="btn-apply-scale"
+                  class="button button-primary button-block"
+                  type="button"
+                  disabled
+                >
+                  保存校准
+                </button>
+                <div id="scale-status" class="inline-status" role="status">
+                  尚未校准
+                </div>
+              </div>
+            </li>
+
+            <li id="step-analysis" class="workflow-step is-locked">
+              <div class="step-rail"><span>3</span></div>
+              <div class="step-content">
+                <div class="step-title-row">
+                  <div>
+                    <span class="step-kicker">分析</span>
+                    <h2>检测与测量</h2>
+                  </div>
+                  <span id="step-analysis-state" class="step-state"
+                    >等待校准</span
+                  >
+                </div>
+                <p class="step-description">
+                  自动识别 CNT，逐条测量并执行正式统计 QC。
+                </p>
+                <button
+                  id="btn-run-yolo"
+                  class="button button-accent button-block button-large"
+                  type="button"
+                  disabled
+                >
+                  <span id="run-label">开始自动分析</span>
+                </button>
+                <button
+                  id="btn-cancel-analysis"
+                  class="button button-danger-quiet button-block"
+                  type="button"
+                  hidden
+                >
+                  取消分析
+                </button>
+
+                <details class="advanced-settings">
+                  <summary>高级分析参数</summary>
+                  <div class="advanced-body">
+                    <label class="range-field">
+                      <span
+                        >检测置信度
+                        <output id="conf-label" for="yolo-conf"
+                          >0.25</output
+                        ></span
+                      >
+                      <input
+                        id="yolo-conf"
+                        type="range"
+                        min="5"
+                        max="95"
+                        value="25"
+                        step="1"
+                      />
+                    </label>
+                    <label id="model-path-field" class="field"
+                      ><span>IoU 阈值</span
+                      ><input
+                        id="iou-threshold"
+                        type="number"
+                        min="0.05"
+                        max="0.95"
+                        step="0.05"
+                        value="0.45"
+                    /></label>
+                    <label id="model-path-field" class="field"
+                      ><span id="model-path-label">模型路径</span
+                      ><input
+                        id="model-path"
+                        type="text"
+                        value="best.onnx"
+                        spellcheck="false"
+                    /></label>
+                    <p id="model-status" class="helper-text">
+                      模型将在首次分析时加载。
+                    </p>
+                    <div class="toggle-row">
+                      <label class="toggle"
+                        ><input id="show-boxes" type="checkbox" checked /><span
+                          >显示检测框</span
+                        ></label
+                      >
+                      <label class="toggle"
+                        ><input id="enable-tta" type="checkbox" /><span
+                          id="tta-label"
+                          >测试时增强</span
+                        ></label
+                      >
+                    </div>
+                    <div class="button-row">
+                      <button
+                        id="btn-roi-mode"
+                        class="button button-secondary button-grow"
+                        type="button"
+                      >
+                        框选分析区域
+                      </button>
+                      <button
+                        id="btn-reset-roi"
+                        class="button button-quiet"
+                        type="button"
+                      >
+                        使用全图
+                      </button>
+                    </div>
+                    <span id="roi-status" class="helper-text"
+                      >当前：整张图像</span
+                    >
+                    <hr />
+                    <div class="preprocess-grid">
+                      <label class="field"
+                        ><span>高斯核</span
+                        ><input
+                          id="gaussian-kernel"
+                          type="number"
+                          value="5"
+                          min="1"
+                          max="31"
+                          step="2"
+                      /></label>
+                      <label class="field"
+                        ><span>CLAHE</span
+                        ><input
+                          id="clahe-clip"
+                          type="number"
+                          value="2.0"
+                          min="0.5"
+                          max="10"
+                          step="0.1"
+                      /></label>
+                      <label class="field"
+                        ><span>网格</span
+                        ><input
+                          id="clahe-grid"
+                          type="number"
+                          value="8"
+                          min="2"
+                          max="32"
+                          step="1"
+                      /></label>
+                    </div>
+                    <div class="button-row">
+                      <button
+                        id="btn-apply-preprocess"
+                        class="button button-secondary button-grow"
+                        type="button"
+                      >
+                        应用预处理
+                      </button>
+                      <button
+                        id="btn-restore"
+                        class="button button-quiet"
+                        type="button"
+                      >
+                        恢复原图
+                      </button>
+                    </div>
+                  </div>
+                </details>
+              </div>
+            </li>
+          </ol>
+
+          <div class="privacy-note">
+            <span aria-hidden="true">i</span>
+            <p>
+              <strong>临时云端处理</strong><br />会话空闲 30
+              分钟后释放，图像不会写入持久存储。
+            </p>
+          </div>
+        </aside>
+
+        <section class="viewer-panel" aria-label="TEM 图像查看器">
+          <header class="viewer-header">
+            <div class="viewer-file">
+              <strong id="viewer-file-name">尚未载入图像</strong
+              ><span id="viewer-file-meta">导入图像后即可开始</span>
+            </div>
+            <div class="viewer-readout" aria-label="查看器状态">
+              <span id="canvas-mode-label">浏览</span><i aria-hidden="true"></i>
+              <span id="zoom-label">100%</span><i aria-hidden="true"></i>
+              <span id="coord-label">x — · y —</span>
+            </div>
+            <button
+              id="btn-results-drawer"
+              class="button button-quiet results-drawer-toggle"
+              type="button"
+              aria-controls="results-panel"
+              aria-expanded="false"
+            >
+              结果
+            </button>
+          </header>
+
+          <div id="canvas-container" class="canvas-stage">
+            <canvas
+              id="main-canvas"
+              tabindex="0"
+              aria-label="TEM 图像与检测结果画布"
+            ></canvas>
+            <div
+              id="canvas-instruction"
+              class="canvas-instruction"
+              role="status"
+              aria-live="polite"
+              hidden
+            >
+              <span class="instruction-mark" aria-hidden="true">1→2</span>
+              <span id="canvas-instruction-text"></span>
+            </div>
+            <button id="canvas-placeholder" class="drop-zone" type="button">
+              <span class="drop-zone-mark" aria-hidden="true">＋</span>
+              <strong>导入一张 TEM 图像</strong>
+              <span>拖放文件到这里，或点击选择</span>
+              <small
+                >PNG · JPG · TIFF · BMP，最大 15 MB，解码后不超过 25 MP</small
+              >
+            </button>
+            <div
+              id="analysis-overlay"
+              class="analysis-overlay"
+              hidden
+              role="status"
+              aria-live="polite"
+            >
+              <span class="analysis-spinner" aria-hidden="true"></span>
+              <strong id="analysis-title">正在分析图像</strong>
+              <span id="analysis-detail">加载模型并识别 CNT…</span>
+            </div>
+            <div class="canvas-toolbar" role="toolbar" aria-label="图像工具">
+              <button
+                id="btn-pan-mode"
+                class="canvas-tool is-active"
+                type="button"
+                aria-pressed="true"
+              >
+                浏览 <kbd>V</kbd>
+              </button>
+              <button
+                id="btn-measure-mode"
+                class="canvas-tool"
+                type="button"
+                aria-pressed="false"
+              >
+                连续测量 <kbd>M</kbd>
+              </button>
+              <span class="toolbar-divider" aria-hidden="true"></span>
+              <button
+                id="btn-zoom-out"
+                class="canvas-tool square"
+                type="button"
+                aria-label="缩小"
+              >
+                −
+              </button>
+              <button id="btn-fit" class="canvas-tool" type="button">
+                适应
+              </button>
+              <button
+                id="btn-zoom-in"
+                class="canvas-tool square"
+                type="button"
+                aria-label="放大"
+              >
+                ＋
+              </button>
+            </div>
+          </div>
+
+          <footer class="viewer-footer">
+            <span id="viewer-scale">比例尺未校准</span>
+            <span id="viewer-roi">分析范围：全图</span>
+            <span id="viewer-run">尚无运行记录</span>
+          </footer>
+        </section>
+
+        <aside id="results-panel" class="results-panel" aria-label="分析结果">
+          <div class="panel-heading results-heading">
+            <div>
+              <span class="eyebrow">RESULTS</span>
+              <h2>分析结果</h2>
+            </div>
+            <div class="heading-actions">
+              <span id="result-count-badge" class="count-badge">0 条</span
+              ><button
+                id="btn-close-results"
+                class="icon-button results-close"
+                type="button"
+                aria-label="关闭结果面板"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+
+          <div class="metric-grid" aria-label="统计摘要">
+            <article>
+              <span>有效测量</span><strong id="stat-count">0</strong
+              ><small>条</small>
+            </article>
+            <article>
+              <span>平均管径</span><strong id="stat-mean">—</strong
+              ><small>nm</small>
+            </article>
+            <article>
+              <span>标准差</span><strong id="stat-std">—</strong
+              ><small>nm</small>
+            </article>
+          </div>
+
+          <div id="result-guidance" class="result-guidance" role="status">
+            <span class="guidance-mark" aria-hidden="true">01</span>
+            <p>
+              <strong>还没有分析结果</strong
+              ><br />完成左侧三步流程后，结果会出现在这里。
+            </p>
+          </div>
+
+          <div class="results-tabs" role="tablist" aria-label="结果视图">
+            <button
+              id="tab-measurements"
+              class="result-tab is-active"
+              type="button"
+              role="tab"
+              aria-selected="true"
+              aria-controls="results-view-table"
+              tabindex="0"
+            >
+              测量列表
+            </button>
+            <button
+              id="tab-chart"
+              class="result-tab"
+              type="button"
+              role="tab"
+              aria-selected="false"
+              aria-controls="results-view-chart"
+              tabindex="-1"
+            >
+              直径分布
+            </button>
+          </div>
+
+          <div
+            id="results-view-table"
+            class="result-view"
+            role="tabpanel"
+            aria-labelledby="tab-measurements"
+          >
+            <div class="table-wrap">
+              <table id="results-table">
+                <thead>
+                  <tr>
+                    <th scope="col">#</th>
+                    <th
+                      scope="col"
+                      id="diameter-sort-header"
+                      aria-sort="descending"
+                    >
+                      <button id="btn-sort-diameter" type="button">
+                        管径 <small>nm</small><span aria-hidden="true">↓</span>
+                      </button>
+                    </th>
+                    <th scope="col">方法</th>
+                    <th scope="col">QC</th>
+                    <th scope="col"><span class="sr-only">操作</span></th>
+                  </tr>
+                </thead>
+                <tbody id="results-tbody">
+                  <tr class="empty-row">
+                    <td colspan="5">暂无测量记录</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="pagination" aria-label="测量结果分页">
+              <label
+                >每页
+                <select id="page-size">
+                  <option>50</option>
+                  <option selected>100</option>
+                  <option>200</option>
+                </select></label
+              >
+              <span id="page-summary">0–0 / 0</span>
+              <button
+                id="btn-page-prev"
+                class="icon-button"
+                type="button"
+                aria-label="上一页"
+              >
+                ‹
+              </button>
+              <button
+                id="btn-page-next"
+                class="icon-button"
+                type="button"
+                aria-label="下一页"
+              >
+                ›
+              </button>
+            </div>
+          </div>
+
+          <div
+            id="results-view-chart"
+            class="result-view"
+            role="tabpanel"
+            aria-labelledby="tab-chart"
+            hidden
+          >
+            <div class="chart-card">
+              <div class="chart-heading">
+                <strong>管径分布</strong><span id="chart-range">暂无数据</span>
+              </div>
+              <canvas
+                id="chart-canvas"
+                aria-label="CNT 管径分布直方图"
+              ></canvas>
+              <p id="chart-caption">分析完成后显示直径分布。</p>
+            </div>
+          </div>
+
+          <div class="results-actions">
+            <button
+              id="btn-save-image"
+              class="button button-secondary"
+              type="button"
+              disabled
+            >
+              保存标注图
+            </button>
+            <button
+              id="btn-undo"
+              class="button button-quiet"
+              type="button"
+              disabled
+            >
+              撤销
+            </button>
+            <button
+              id="btn-clear-all"
+              class="button button-danger-quiet"
+              type="button"
+              disabled
+            >
+              清空
+            </button>
+          </div>
+        </aside>
+      </main>
+
+      <nav class="mobile-action-bar" aria-label="移动端主要操作">
+        <button id="mobile-report" type="button" disabled>报告</button>
+        <button id="mobile-export" type="button" disabled>CSV</button>
+        <button id="mobile-annotated" type="button" disabled>标注图</button>
+        <button id="mobile-results" type="button">结果</button>
+      </nav>
+    </div>
+
+    <input
+      id="file-input"
+      type="file"
+      accept=".tif,.tiff,.jpg,.jpeg,.png,.bmp"
+      hidden
+    />
+
+    <div id="modal-overlay" class="modal-overlay" hidden>
+      <section
+        class="modal"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="modal-title"
+        tabindex="-1"
+      >
+        <header class="modal-header">
+          <div>
+            <span class="eyebrow">ANALYSIS</span>
+            <h2 id="modal-title">分析报告</h2>
+          </div>
+          <button
+            id="modal-close"
+            class="icon-button"
+            type="button"
+            aria-label="关闭"
+          >
+            ×
+          </button>
+        </header>
+        <div id="modal-body" class="modal-body"></div>
+        <footer class="modal-footer">
+          <button id="modal-cancel" class="button button-quiet" type="button">
+            取消</button
+          ><button id="modal-ok" class="button button-primary" type="button">
+            完成
+          </button>
+        </footer>
+      </section>
+    </div>
+
+    <div
+      id="toast-region"
+      class="toast-region"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+    <div
+      id="app-live-region"
+      class="sr-only"
+      role="status"
+      aria-live="polite"
+      aria-atomic="true"
+    ></div>
+
+    <script src="./static/js/runtime-config.js"></script>
+    <script type="module" src="./static/js/app.js"></script>
+  </body>
+</html>

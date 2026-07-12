@@ -1,0 +1,196 @@
+@media (max-width: 1399px) {
+  .workspace {
+    grid-template-columns: 286px minmax(390px, 1fr) 330px;
+  }
+  .workflow-panel,
+  .results-panel {
+    padding: var(--space-4);
+  }
+}
+
+@media (max-width: 1199px) and (min-width: 800px) {
+  .app-header {
+    grid-template-columns: 1fr auto;
+  }
+  .header-session {
+    display: none;
+  }
+  .workspace {
+    grid-template-columns: 286px minmax(0, 1fr);
+  }
+  .results-drawer-toggle.button,
+  .results-close.icon-button {
+    display: inline-grid;
+  }
+  .results-panel {
+    position: fixed;
+    z-index: var(--z-drawer);
+    top: 64px;
+    right: 0;
+    bottom: 0;
+    width: min(390px, calc(100vw - 310px));
+    transform: translateX(102%);
+    border-left: 1px solid var(--color-border);
+    box-shadow: var(--shadow-lg);
+    transition: transform var(--transition-normal);
+  }
+  body.results-open .results-panel {
+    transform: translateX(0);
+  }
+  body.results-open::after {
+    content: "";
+    position: fixed;
+    z-index: calc(var(--z-drawer) - 1);
+    inset: 64px 0 0 286px;
+    background: rgb(6 18 14 / 35%);
+  }
+  .results-drawer-toggle {
+    color: #e3ece9;
+  }
+}
+
+@media (max-width: 799px) {
+  body {
+    overflow: auto;
+    padding-bottom: calc(58px + env(safe-area-inset-bottom));
+  }
+  .app-shell {
+    height: auto;
+    min-height: 100dvh;
+    display: block;
+    overflow: visible;
+  }
+  .app-header {
+    position: sticky;
+    top: 0;
+    height: 60px;
+    grid-template-columns: 1fr auto;
+    padding: 0 var(--space-3);
+  }
+  .brand-copy small,
+  .header-session,
+  .header-actions .button:not(#btn-open) {
+    display: none;
+  }
+  .brand-mark {
+    width: 34px;
+    height: 34px;
+  }
+  .header-actions #btn-open {
+    min-height: 40px;
+  }
+  .workspace {
+    display: flex;
+    flex-direction: column;
+    overflow: visible;
+    background: var(--color-app);
+  }
+  .workflow-panel,
+  .results-panel,
+  .viewer-panel {
+    width: 100%;
+    overflow: visible;
+  }
+  .workflow-panel {
+    order: 2;
+    padding: var(--space-4);
+  }
+  .viewer-panel {
+    order: 1;
+    height: min(66vh, 580px);
+    min-height: 430px;
+    grid-template-rows: 50px minmax(0, 1fr) 34px;
+  }
+  .results-panel {
+    order: 3;
+    padding: var(--space-4);
+  }
+  .results-drawer-toggle.button,
+  .results-close.icon-button {
+    display: none;
+  }
+  .viewer-readout #coord-label,
+  .viewer-readout i:last-of-type {
+    display: none;
+  }
+  .viewer-footer #viewer-run {
+    display: none;
+  }
+  .canvas-toolbar {
+    bottom: var(--space-2);
+  }
+  .canvas-tool {
+    min-width: 42px;
+    padding: 7px 8px;
+  }
+  .canvas-tool kbd {
+    display: none;
+  }
+  .drop-zone {
+    min-height: 200px;
+  }
+  .mobile-action-bar {
+    position: fixed;
+    z-index: var(--z-header);
+    left: 0;
+    right: 0;
+    bottom: 0;
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    padding: 6px max(8px, env(safe-area-inset-left))
+      calc(6px + env(safe-area-inset-bottom))
+      max(8px, env(safe-area-inset-right));
+    border-top: 1px solid var(--color-border);
+    background: rgb(255 255 255 / 96%);
+    box-shadow: 0 -6px 22px rgb(13 34 28 / 10%);
+  }
+  .mobile-action-bar button {
+    min-height: 42px;
+    border: 0;
+    color: var(--color-text-secondary);
+    background: transparent;
+    font-weight: 650;
+  }
+  .toast-region {
+    bottom: calc(68px + env(safe-area-inset-bottom));
+  }
+}
+
+@media (max-width: 520px) {
+  .scale-grid {
+    grid-template-columns: 1fr;
+  }
+  .preprocess-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .metric-grid article {
+    padding: 9px;
+  }
+  .metric-grid strong {
+    font-size: 16px;
+  }
+  .viewer-header {
+    padding: 0 var(--space-3);
+  }
+  .viewer-readout {
+    display: none;
+  }
+  .viewer-footer {
+    gap: var(--space-2);
+    padding: 0 var(--space-3);
+  }
+  .report-grid {
+    grid-template-columns: 1fr;
+  }
+  .modal-overlay {
+    padding: var(--space-2);
+  }
+  .modal {
+    max-height: calc(100dvh - 16px);
+  }
+  .modal-header,
+  .modal-footer,
+  .modal-body {
+    padding: var(--space-4);
+  }
+}

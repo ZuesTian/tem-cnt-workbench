@@ -1,0 +1,204 @@
+.canvas-stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  background:
+    radial-gradient(
+      circle at center,
+      var(--viewer-stage-glow),
+      transparent 55%
+    ),
+    var(--color-canvas);
+  touch-action: none;
+}
+
+#main-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  display: block;
+  touch-action: none;
+  cursor: grab;
+}
+#main-canvas[data-mode="measure"],
+#main-canvas[data-mode="scale"] {
+  cursor: crosshair;
+}
+#main-canvas[data-mode="roi"] {
+  cursor: crosshair;
+}
+#main-canvas.is-dragging {
+  cursor: grabbing;
+}
+
+.canvas-instruction {
+  position: absolute;
+  z-index: var(--z-toolbar);
+  top: var(--space-3);
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(560px, calc(100% - 32px));
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: 8px 11px;
+  border: 1px solid var(--viewer-instruction-border);
+  border-radius: var(--radius-md);
+  color: var(--viewer-instruction-text);
+  background: var(--viewer-instruction-background);
+  box-shadow: var(--viewer-instruction-shadow);
+  font-size: 12px;
+  pointer-events: none;
+}
+.canvas-instruction[hidden] {
+  display: none;
+}
+.instruction-mark {
+  flex: none;
+  min-width: 34px;
+  padding: 4px 6px;
+  border-radius: 999px;
+  color: var(--viewer-instruction-mark-text);
+  background: var(--viewer-instruction-mark-background);
+  font: 750 11px/1 var(--font-mono);
+  text-align: center;
+}
+.canvas-instruction.is-pending {
+  border-color: var(--viewer-instruction-pending-border);
+}
+.canvas-instruction.is-pending .instruction-mark {
+  color: var(--viewer-instruction-pending-text);
+  background: var(--viewer-instruction-pending-background);
+}
+
+.drop-zone {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100% - 40px));
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border: 1px dashed var(--viewer-drop-border);
+  border-radius: var(--radius-lg);
+  color: var(--viewer-drop-text);
+  background: var(--viewer-drop-background);
+  transition:
+    border-color var(--transition-normal),
+    background var(--transition-normal),
+    transform var(--transition-normal);
+}
+.drop-zone:hover,
+.canvas-stage.is-dragover .drop-zone {
+  border-color: var(--viewer-drop-hover-border);
+  background: var(--viewer-drop-hover-background);
+}
+.drop-zone.hidden {
+  display: none;
+}
+.drop-zone-mark {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--viewer-drop-border);
+  border-radius: 50%;
+  color: var(--viewer-drop-mark);
+  font-size: 28px;
+}
+.drop-zone strong {
+  font-size: 15px;
+}
+.drop-zone span {
+  color: var(--viewer-drop-muted);
+}
+.drop-zone small {
+  margin-top: var(--space-2);
+  color: var(--viewer-drop-subtle);
+  font-size: 12px;
+}
+
+.canvas-toolbar {
+  position: absolute;
+  z-index: var(--z-toolbar);
+  left: 50%;
+  bottom: var(--space-4);
+  transform: translateX(-50%);
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  padding: 5px;
+  border: 1px solid var(--viewer-toolbar-border);
+  border-radius: var(--radius-md);
+  background: var(--viewer-toolbar-background);
+  box-shadow: var(--viewer-toolbar-shadow);
+}
+.canvas-tool {
+  min-height: 40px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  padding: 7px 10px;
+  color: var(--viewer-toolbar-text);
+  background: transparent;
+  white-space: nowrap;
+}
+.canvas-tool:hover:not(:disabled),
+.canvas-tool.is-active {
+  color: var(--viewer-toolbar-active-text);
+  background: var(--viewer-toolbar-hover);
+}
+.canvas-tool.is-active {
+  box-shadow: inset 0 0 0 1px var(--viewer-toolbar-active-ring);
+}
+.canvas-tool.square {
+  width: 40px;
+  padding: 0;
+  font-size: 20px;
+}
+.canvas-tool kbd {
+  margin-left: 4px;
+  color: var(--viewer-toolbar-key);
+  font: 12px/1 var(--font-mono);
+}
+.toolbar-divider {
+  width: 1px;
+  height: 24px;
+  margin: 0 3px;
+  background: var(--viewer-toolbar-border);
+}
+
+.analysis-overlay {
+  position: absolute;
+  z-index: 9;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  color: var(--viewer-overlay-text);
+  background: var(--viewer-overlay-background);
+  backdrop-filter: blur(3px);
+}
+.analysis-overlay span {
+  color: var(--viewer-overlay-muted);
+}
+.analysis-spinner {
+  width: 34px;
+  height: 34px;
+  margin-bottom: var(--space-2);
+  border: 3px solid var(--viewer-spinner-track);
+  border-top-color: var(--viewer-spinner-accent);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
