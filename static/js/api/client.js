@@ -249,6 +249,16 @@ export class ApiClient {
   getMeasurements() {
     return this.request("/api/data/measurements");
   }
+  getCheckpoint() {
+    return this.request("/api/data/checkpoint");
+  }
+  restoreCheckpoint(checkpoint) {
+    return this.request("/api/session/restore", {
+      method: "POST",
+      body: JSON.stringify({ checkpoint }),
+      timeout: 60000,
+    });
+  }
   getRun(runId) {
     return this.request(`/api/runs/${encodeURIComponent(runId)}`);
   }

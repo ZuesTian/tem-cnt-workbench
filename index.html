@@ -68,6 +68,75 @@
             <span id="workflow-progress" class="progress-badge">0 / 3</span>
           </div>
 
+          <section id="batch-panel" class="batch-panel" aria-label="文件夹批处理队列" hidden>
+            <div class="batch-heading">
+              <div>
+                <span class="step-kicker">BATCH QUEUE</span>
+                <strong id="batch-name">尚未选择文件夹</strong>
+              </div>
+              <button
+                id="btn-batch-clear"
+                class="icon-button"
+                type="button"
+                aria-label="结束当前批处理"
+              >
+                ×
+              </button>
+            </div>
+            <div
+              id="batch-progress"
+              class="batch-progress"
+              role="progressbar"
+              aria-valuemin="0"
+              aria-valuemax="0"
+              aria-valuenow="0"
+            >
+              <span id="batch-progress-bar"></span>
+            </div>
+            <div class="batch-meta">
+              <span id="batch-position">0 / 0</span>
+              <span id="batch-completed">已保存 0 张</span>
+            </div>
+            <button
+              id="btn-batch-output"
+              class="button button-secondary button-block"
+              type="button"
+            >
+              选择自动保存目录
+            </button>
+            <p id="batch-output-status" class="helper-text">
+              未授权目录；结果将安全缓存于此浏览器。
+            </p>
+            <ol id="batch-queue" class="batch-queue" aria-label="图像队列"></ol>
+            <div class="batch-navigation">
+              <button id="btn-batch-prev" class="button button-quiet" type="button">
+                ← 上一张
+              </button>
+              <button id="btn-batch-next" class="button button-quiet" type="button">
+                下一张 →
+              </button>
+            </div>
+            <button
+              id="btn-batch-confirm"
+              class="button button-primary button-block"
+              type="button"
+              disabled
+            >
+              确认并保存，进入下一张
+            </button>
+            <button
+              id="btn-batch-summary"
+              class="button button-secondary button-block"
+              type="button"
+              disabled
+            >
+              导出整批统计汇总
+            </button>
+            <p id="batch-status" class="inline-status" role="status">
+              等待载入队列
+            </p>
+          </section>
+
           <ol class="workflow-list">
             <li id="step-image" class="workflow-step is-active">
               <div class="step-rail"><span>1</span></div>
@@ -82,13 +151,22 @@
                 <p class="step-description">
                   图像会发送到云端临时处理，不会持久保存。
                 </p>
-                <button
-                  id="btn-open-secondary"
-                  class="button button-secondary button-block"
-                  type="button"
-                >
-                  选择图像文件
-                </button>
+                <div class="input-choice-grid">
+                  <button
+                    id="btn-open-secondary"
+                    class="button button-secondary"
+                    type="button"
+                  >
+                    选择单张
+                  </button>
+                  <button
+                    id="btn-open-folder"
+                    class="button button-secondary"
+                    type="button"
+                  >
+                    选择文件夹
+                  </button>
+                </div>
                 <div id="image-summary" class="file-summary" hidden>
                   <span class="file-thumb" aria-hidden="true">TEM</span>
                   <span class="file-copy"
@@ -484,7 +562,7 @@
               ><small>nm</small>
             </article>
             <article>
-              <span>标准差</span><strong id="stat-std">—</strong
+              <span>样本标准差</span><strong id="stat-std">—</strong
               ><small>nm</small>
             </article>
           </div>
@@ -592,13 +670,90 @@
           >
             <div class="chart-card">
               <div class="chart-heading">
-                <strong>管径分布</strong><span id="chart-range">暂无数据</span>
+                <div>
+                  <strong>管径分布</strong>
+                  <span id="chart-range">暂无数据</span>
+                </div>
+                <span id="chart-sample-size">N = 0</span>
               </div>
-              <canvas
-                id="chart-canvas"
-                aria-label="CNT 管径分布直方图"
-              ></canvas>
+              <div class="chart-controls" aria-label="分布图设置">
+                <label
+                  ><span>数据范围</span
+                  ><select id="chart-scope">
+                    <option value="current">当前图片</option>
+                    <option id="chart-scope-batch" value="batch" disabled>
+                      整批文件夹
+                    </option>
+                  </select></label
+                >
+                <label
+                  ><span>纵轴</span
+                  ><select id="chart-y-axis">
+                    <option value="count">根数</option>
+                    <option value="percent">占比</option>
+                  </select></label
+                >
+                <label
+                  ><span>分组方式</span
+                  ><select id="chart-bin-mode">
+                    <option value="auto">自动（推荐）</option>
+                    <option value="count">指定区间数</option>
+                    <option value="width">指定区间宽度</option>
+                  </select></label
+                >
+                <label id="chart-bin-value-field" hidden
+                  ><span id="chart-bin-value-label">区间数</span
+                  ><span class="input-with-unit"
+                    ><input
+                      id="chart-bin-value"
+                      type="number"
+                      min="1"
+                      max="30"
+                      step="1"
+                      value="10"
+                      inputmode="decimal"
+                    /><b id="chart-bin-value-unit">档</b></span
+                  ></label
+                >
+              </div>
+              <div id="chart-plot" class="chart-plot">
+                <canvas
+                  id="chart-canvas"
+                  tabindex="0"
+                  aria-label="CNT 管径分布直方图"
+                  aria-describedby="chart-caption chart-bin-table-caption"
+                ></canvas>
+                <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+              </div>
+              <dl id="chart-summary" class="chart-summary" hidden>
+                <div><dt>中位数</dt><dd id="chart-median">—</dd></div>
+                <div><dt>Q1–Q3</dt><dd id="chart-quartiles">—</dd></div>
+                <div><dt>样本 SD</dt><dd id="chart-sample-std">—</dd></div>
+                <div><dt>变异系数</dt><dd id="chart-cv">—</dd></div>
+              </dl>
               <p id="chart-caption">分析完成后显示直径分布。</p>
+              <details id="chart-bin-details" class="chart-bin-details" open>
+                <summary>区间明细</summary>
+                <div class="chart-bin-table-wrap">
+                  <table class="chart-bin-table">
+                    <caption id="chart-bin-table-caption" class="sr-only">
+                      直径统计区间、CNT 根数及占比
+                    </caption>
+                    <thead>
+                      <tr>
+                        <th scope="col">直径范围 (nm)</th>
+                        <th scope="col">根数</th>
+                        <th scope="col">占比</th>
+                      </tr>
+                    </thead>
+                    <tbody id="chart-bin-tbody">
+                      <tr class="empty-row">
+                        <td colspan="3">暂无统计数据</td>
+                      </tr>
+                    </tbody>
+                  </table>
+                </div>
+              </details>
             </div>
           </div>
 
@@ -643,6 +798,15 @@
       id="file-input"
       type="file"
       accept=".tif,.tiff,.jpg,.jpeg,.png,.bmp"
+      hidden
+    />
+    <input
+      id="folder-input"
+      type="file"
+      accept=".tif,.tiff,.jpg,.jpeg,.png,.bmp"
+      webkitdirectory
+      directory
+      multiple
       hidden
     />
 

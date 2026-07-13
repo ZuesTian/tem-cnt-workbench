@@ -23,6 +23,7 @@ export class WorkspaceRenderer {
     const active = Boolean(task && ACTIVE.has(task.state));
     const scaleSet = Boolean(snapshot?.calibration?.nm_per_pixel);
     const hasResults = state.measurements.length > 0;
+    const batchActive = state.batch?.active === true;
     const unavailable = active || state.ui.imageLoading;
 
     this.viewer.setOverlays({
@@ -34,7 +35,14 @@ export class WorkspaceRenderer {
     });
     this.renderSession({ snapshot, image, task, active, scaleSet, hasResults });
     this.renderTask({ task, active });
-    this.renderControls({ image, active, unavailable, scaleSet, hasResults });
+    this.renderControls({
+      image,
+      active,
+      unavailable,
+      scaleSet,
+      hasResults,
+      batchActive,
+    });
     this.renderWorkflow({ image, scaleSet, hasResults });
     this.renderImageMetadata({ snapshot, image, scaleSet, state });
 
@@ -43,8 +51,13 @@ export class WorkspaceRenderer {
         `校准完成 · ${Number(snapshot.calibration.nm_per_pixel).toFixed(6)} nm/px`,
         "success",
       );
-    else if (image && !$("#scale-status").classList.contains("is-warning"))
-      this.workflow.setScaleMessage("尚未校准");
+    else if (image) {
+      const scaleStatus = $("#scale-status");
+      const hasSpecificMessage = ["is-success", "is-warning", "is-error"].some(
+        (className) => scaleStatus.classList.contains(className),
+      );
+      if (!hasSpecificMessage) this.workflow.setScaleMessage("尚未校准");
+    }
     this.workflow.updateScaleButton();
   }
 
@@ -80,7 +93,14 @@ export class WorkspaceRenderer {
     $("#btn-cancel-analysis").hidden = !active;
   }
 
-  renderControls({ image, active, unavailable, scaleSet, hasResults }) {
+  renderControls({
+    image,
+    active,
+    unavailable,
+    scaleSet,
+    hasResults,
+    batchActive,
+  }) {
     const mutationControls = [
       "#btn-open",
       "#btn-open-secondary",
@@ -96,8 +116,18 @@ export class WorkspaceRenderer {
       "#enable-tta",
     ];
     mutationControls.forEach((selector) => {
+      const blockedByBatch =
+        batchActive &&
+        [
+          "#btn-open",
+          "#btn-open-secondary",
+          "#btn-apply-preprocess",
+          "#btn-restore",
+        ].includes(selector);
       $(selector).disabled =
-        unavailable || (!image && !selector.includes("open"));
+        unavailable ||
+        blockedByBatch ||
+        (!image && !selector.includes("open"));
     });
     $("#btn-run-yolo").disabled = unavailable || !image || !scaleSet;
     $("#btn-apply-scale").disabled =
