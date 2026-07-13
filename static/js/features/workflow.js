@@ -3,7 +3,16 @@
 import { $ } from "../ui/dom.js";
 
 export class WorkflowController {
-  constructor({ store, api, viewer, dialog, toast, applySnapshot, refresh }) {
+  constructor({
+    store,
+    api,
+    viewer,
+    dialog,
+    toast,
+    applySnapshot,
+    refresh,
+    onScaleApplied = () => {},
+  }) {
     this.store = store;
     this.api = api;
     this.viewer = viewer;
@@ -11,6 +20,9 @@ export class WorkflowController {
     this.toast = toast;
     this.applySnapshot = applySnapshot;
     this.refresh = refresh;
+    this.onScaleApplied = /** @type {(result:any) => unknown} */ (
+      onScaleApplied
+    );
     this.fileInput = $("#file-input");
     this.dropStage = $("#canvas-container");
     this.measurementQueue = Promise.resolve();
@@ -112,13 +124,17 @@ export class WorkflowController {
     try {
       this.viewer.setMode("pan");
       this.viewer.setOverlays({ scaleBox: null });
+      $("#scale-px").value = "";
+      this.setScaleMessage("尚未校准");
       const snapshot = await this.api.uploadImage(file);
       this.store.dispatch({ type: "RESET_IMAGE_STATE" });
       await this.applySnapshot(snapshot, { loadImage: true });
       await this.refresh({ session: false });
       this.toast.show("图像已载入，可继续设置比例尺。");
+      return snapshot;
     } catch (error) {
       this.toast.show(error.message || "图像载入失败。", "error");
+      return null;
     } finally {
       this.store.dispatch({
         type: "UI_PATCH",
@@ -189,6 +205,9 @@ export class WorkflowController {
       this.viewer.setOverlays({ scaleBox: null });
       this.viewer.setMode("pan");
       this.toast.show("比例尺已保存，所有测量已按像素原值更新。");
+      Promise.resolve(this.onScaleApplied(result)).catch((error) => {
+        this.toast.show(error.message || "自动启动批处理分析失败。", "error");
+      });
     } catch (error) {
       this.setScaleMessage(error.message || "比例尺保存失败。", "error");
       this.toast.show(error.message || "比例尺保存失败。", "error");

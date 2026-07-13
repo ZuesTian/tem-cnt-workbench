@@ -2,6 +2,7 @@
 
 import { ApiClient } from "./api/client.js";
 import { AnalysisController } from "./features/analysis.js";
+import { BatchController } from "./features/batch.js";
 import { ResultsController } from "./features/results.js";
 import { WorkflowController } from "./features/workflow.js";
 import { createStore, initialState } from "./state/store.js";
@@ -17,6 +18,7 @@ const toast = new ToastRegion($("#toast-region"), $("#app-live-region"));
 const dialog = new Dialog($("#modal-overlay"), $("#app-shell"));
 let workflow;
 let analysis;
+let batch;
 let workspaceRenderer;
 let loadedRevision = null;
 let refreshGeneration = 0;
@@ -69,6 +71,7 @@ async function applySnapshot(snapshot, options = {}) {
     $("#scale-nm").value = String(snapshot.calibration.nm);
   if (snapshot.calibration?.pixels)
     $("#scale-px").value = String(snapshot.calibration.pixels);
+  else if (shouldLoad) $("#scale-px").value = "";
   workflow?.updateScaleButton();
   if (snapshot.preprocessing?.applied) {
     if (snapshot.preprocessing.gaussian)
@@ -137,11 +140,23 @@ workflow = new WorkflowController({
   toast,
   applySnapshot,
   refresh,
+  onScaleApplied: (result) => batch?.onScaleApplied(result),
 });
 analysis = new AnalysisController({
   store,
   api,
   toast,
+  applySnapshot,
+  refresh,
+  onSettled: (task) => batch?.onAnalysisSettled(task),
+});
+batch = new BatchController({
+  store,
+  api,
+  workflow,
+  analysis,
+  toast,
+  dialog,
   applySnapshot,
   refresh,
 });
@@ -154,12 +169,19 @@ store.subscribe((state) => {
 
 function applyConfig(config) {
   const publicMode = config.public_mode === true;
+  const batchEnabled =
+    config.features?.batch_queue === true &&
+    config.features?.editable_checkpoints === true;
   api.publicMode = publicMode;
   document.body.classList.toggle("is-public-mode", publicMode);
   $("#model-path").readOnly = publicMode;
   $("#model-path").disabled = publicMode;
   $("#model-path-label").textContent = publicMode ? "服务器模型" : "模型路径";
   $("#enable-tta").disabled = publicMode;
+  $("#btn-open-folder").disabled = !batchEnabled;
+  $("#btn-open-folder").title = batchEnabled
+    ? "选择当前文件夹中的 TEM 图像（最多 50 张）"
+    : "当前后端版本尚未启用可编辑批处理";
   if (publicMode) $("#enable-tta").checked = false;
   workflow?.setUploadLimit(config.limits?.max_upload_bytes);
   if (config.yolo) {
@@ -248,6 +270,7 @@ async function initialize() {
     applyConfig(config);
     await applySnapshot(snapshot, { loadImage: true });
     await refresh({ session: false });
+    await batch.initialize();
     const activeTask = store.getState().snapshot?.active_task;
     if (activeTask) {
       store.dispatch({ type: "TASK_RECEIVED", payload: activeTask });
@@ -265,6 +288,7 @@ window.addEventListener(
   "beforeunload",
   () => {
     analysis.destroy();
+    batch.destroy();
     results.destroy();
     workflow.destroy();
     viewer.destroy();

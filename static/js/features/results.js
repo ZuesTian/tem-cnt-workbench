@@ -2,6 +2,30 @@
 
 import { setupTabs } from "../ui/tabs.js";
 import { $ } from "../ui/dom.js";
+import {
+  buildHistogram,
+  formatBinNumber,
+} from "./histogram.js";
+
+function niceAxisMaximum(value) {
+  if (!(value > 0)) return 1;
+  if (value <= 5) return Math.ceil(value);
+  const exponent = 10 ** Math.floor(Math.log10(value));
+  const fraction = value / exponent;
+  const factor = [1, 2, 2.5, 5, 10].find((candidate) => candidate >= fraction);
+  return (factor || 10) * exponent;
+}
+
+function histogramMethodLabel(method) {
+  const labels = {
+    "Freedman–Diaconis": "Freedman–Diaconis 稳健自动分箱",
+    Sturges: "Sturges 自动分箱（四分位距为 0 时回退）",
+    "manual-count": "手动指定区间数",
+    "manual-width": "手动指定区间宽度",
+    "single-value": "单一数值区间",
+  };
+  return labels[method] || "自动分箱";
+}
 
 export function resultGuidance(statistics, scaleSet) {
   const total = Number(statistics?.total_count || 0);
@@ -56,6 +80,11 @@ export class ResultsController {
     this.tableBody = $("#results-tbody");
     this.chart = $("#chart-canvas");
     this.chartFrame = 0;
+    this.histogram = null;
+    this.histogramGeometry = [];
+    this.activeBinIndex = -1;
+    this.manualBinCount = 10;
+    this.manualBinWidth = 0.2;
 
     setupTabs($(".results-tabs"), (panelId) => {
       if (panelId === "results-view-chart") this.requestHistogram();
@@ -85,6 +114,41 @@ export class ResultsController {
       this.downloadAnnotated(),
     );
 
+    ["#chart-scope", "#chart-y-axis"].forEach((selector) => {
+      $(selector).addEventListener("change", () => {
+        this.activeBinIndex = -1;
+        this.hideChartTooltip();
+        this.requestHistogram();
+      });
+    });
+    $("#chart-bin-mode").addEventListener("change", () => {
+      this.updateBinControl();
+      this.activeBinIndex = -1;
+      this.hideChartTooltip();
+      this.requestHistogram();
+    });
+    $("#chart-bin-value").addEventListener("input", (event) => {
+      const mode = $("#chart-bin-mode").value;
+      const value = Number(event.target.value);
+      if (mode === "count" && value > 0) this.manualBinCount = value;
+      if (mode === "width" && value > 0) this.manualBinWidth = value;
+      this.activeBinIndex = -1;
+      this.hideChartTooltip();
+      this.requestHistogram();
+    });
+    this.chart.addEventListener("pointermove", (event) =>
+      this.onChartPointerMove(event),
+    );
+    this.chart.addEventListener("pointerleave", () => {
+      this.activeBinIndex = -1;
+      this.hideChartTooltip();
+      this.requestHistogram();
+    });
+    this.chart.addEventListener("keydown", (event) =>
+      this.onChartKeydown(event),
+    );
+    this.updateBinControl();
+
     this.chartObserver = new ResizeObserver(() => this.requestHistogram());
     this.chartObserver.observe(this.chart);
   }
@@ -93,7 +157,23 @@ export class ResultsController {
     this.renderMetrics(state);
     this.renderGuidance(state);
     this.renderTable(state);
+    this.renderHistogramScope(state);
     this.requestHistogram();
+  }
+
+  renderHistogramScope(state) {
+    const measurements = state.batch?.measurements || [];
+    const includedCount = measurements.filter(
+      (measurement) => measurement.included_in_statistics === true,
+    ).length;
+    const option = $("#chart-scope-batch");
+    option.disabled = includedCount === 0;
+    option.textContent = includedCount
+      ? `整批文件夹 (${includedCount})`
+      : "整批文件夹";
+    if (option.disabled && $("#chart-scope").value === "batch") {
+      $("#chart-scope").value = "current";
+    }
   }
 
   renderMetrics(state) {
@@ -101,7 +181,9 @@ export class ResultsController {
     const diameter = stats.diameter || {};
     $("#stat-count").textContent = String(stats.included_count || 0);
     $("#stat-mean").textContent = this.metric(diameter.mean);
-    $("#stat-std").textContent = this.metric(diameter.std);
+    $("#stat-std").textContent = this.metric(
+      diameter.sample_std ?? diameter.std,
+    );
     $("#result-count-badge").textContent = `${state.measurements.length} 条`;
   }
 
@@ -355,8 +437,17 @@ export class ResultsController {
         ["纳入正式统计", stats.included_count],
         ["复核/排除", stats.excluded_count],
         ["平均管径", `${this.metric(stats.diameter?.mean)} nm`],
-        ["管径标准差", `${this.metric(stats.diameter?.std)} nm`],
+        [
+          "样本标准差 (n−1)",
+          `${this.metric(stats.diameter?.sample_std ?? stats.diameter?.std)} nm`,
+        ],
         ["管径中位数", `${this.metric(stats.diameter?.median)} nm`],
+        [
+          "四分位范围 (Q1–Q3)",
+          `${this.metric(stats.diameter?.q1)}–${this.metric(stats.diameter?.q3)} nm`,
+        ],
+        ["四分位距 (IQR)", `${this.metric(stats.diameter?.iqr)} nm`],
+        ["变异系数", `${this.metric(stats.diameter?.cv_percent)}%`],
         [
           "管径范围",
           `${this.metric(stats.diameter?.min)}–${this.metric(stats.diameter?.max)} nm`,
@@ -411,15 +502,53 @@ export class ResultsController {
     });
   }
 
+  updateBinControl() {
+    const mode = $("#chart-bin-mode").value;
+    const field = $("#chart-bin-value-field");
+    const input = $("#chart-bin-value");
+    field.hidden = mode === "auto";
+    if (mode === "count") {
+      $("#chart-bin-value-label").textContent = "区间数";
+      $("#chart-bin-value-unit").textContent = "档";
+      input.min = "1";
+      input.max = "30";
+      input.step = "1";
+      input.value = String(this.manualBinCount);
+    } else if (mode === "width") {
+      $("#chart-bin-value-label").textContent = "区间宽度";
+      $("#chart-bin-value-unit").textContent = "nm";
+      input.min = "0.001";
+      input.removeAttribute("max");
+      input.step = "0.01";
+      input.value = String(this.manualBinWidth);
+    }
+  }
+
+  histogramValues(state) {
+    const scope = $("#chart-scope").value;
+    const measurements =
+      scope === "batch"
+        ? state.batch?.measurements || []
+        : state.measurements;
+    return measurements
+      .filter((measurement) => measurement.included_in_statistics === true)
+      .map((measurement) => Number(measurement.diameter_nm));
+  }
+
   renderHistogram() {
     if ($("#results-view-chart").hidden) return;
-    const values = this.store
-      .getState()
-      .measurements.filter(
-        (measurement) => measurement.included_in_statistics === true,
-      )
-      .map((measurement) => Number(measurement.diameter_nm))
-      .filter((value) => Number.isFinite(value) && value > 0);
+    const state = this.store.getState();
+    const mode = $("#chart-bin-mode").value;
+    const histogram = buildHistogram(this.histogramValues(state), {
+      mode,
+      binCount: this.manualBinCount,
+      binWidth: this.manualBinWidth,
+      minBins: 5,
+      maxBins: 20,
+    });
+    this.histogram = histogram;
+    this.renderHistogramSummary(histogram);
+    this.renderBinTable(histogram);
     const rect = this.chart.getBoundingClientRect();
     if (rect.width < 10 || rect.height < 10) return;
     const ratio = Math.min(window.devicePixelRatio || 1, 3);
@@ -435,8 +564,16 @@ export class ResultsController {
     const styles = getComputedStyle(document.documentElement);
     const muted = styles.getPropertyValue("--color-text-muted").trim();
     const border = styles.getPropertyValue("--color-border").trim();
+    const borderStrong = styles
+      .getPropertyValue("--color-border-strong")
+      .trim();
     const accent = styles.getPropertyValue("--color-accent").trim();
-    if (!values.length) {
+    const accentStrong = styles
+      .getPropertyValue("--color-accent-strong")
+      .trim();
+    const text = styles.getPropertyValue("--color-text").trim();
+    this.histogramGeometry = [];
+    if (!histogram.values.length) {
       context.fillStyle = muted;
       context.font = "12px sans-serif";
       context.textAlign = "center";
@@ -446,29 +583,29 @@ export class ResultsController {
         rect.height / 2,
       );
       $("#chart-range").textContent = "暂无数据";
+      $("#chart-sample-size").textContent = "N = 0";
       $("#chart-caption").textContent = "通过正式统计 QC 后显示直径分布。";
+      this.chart.setAttribute(
+        "aria-label",
+        "CNT 管径分布直方图，暂无通过 QC 的数据",
+      );
+      this.hideChartTooltip();
       return;
     }
-    let min = Math.min(...values);
-    let max = Math.max(...values);
-    if (min === max) {
-      min = Math.max(0, min - 0.5);
-      max += 0.5;
-    }
-    const bins = Math.min(16, Math.max(5, Math.ceil(Math.sqrt(values.length))));
-    const counts = new Array(bins).fill(0);
-    const binWidth = (max - min) / bins;
-    values.forEach((value) => {
-      counts[Math.min(bins - 1, Math.floor((value - min) / binWidth))] += 1;
-    });
-    const padding = { top: 14, right: 10, bottom: 32, left: 34 };
+    const yAxis = $("#chart-y-axis").value;
+    const yValues = histogram.bins.map((bin) =>
+      yAxis === "percent" ? bin.percent : bin.count,
+    );
+    const padding = { top: 30, right: 10, bottom: 42, left: 42 };
     const plotWidth = rect.width - padding.left - padding.right;
     const plotHeight = rect.height - padding.top - padding.bottom;
-    const maxCount = Math.max(...counts, 1);
+    const axisMaximum = niceAxisMaximum(Math.max(...yValues, 1));
+    const tickCount =
+      yAxis === "count" ? Math.max(1, Math.min(4, axisMaximum)) : 4;
     context.font = "12px sans-serif";
     context.textBaseline = "middle";
-    for (let tick = 0; tick <= 3; tick += 1) {
-      const y = padding.top + plotHeight - (plotHeight * tick) / 3;
+    for (let tick = 0; tick <= tickCount; tick += 1) {
+      const y = padding.top + plotHeight - (plotHeight * tick) / tickCount;
       context.strokeStyle = border;
       context.beginPath();
       context.moveTo(padding.left, y + 0.5);
@@ -476,40 +613,186 @@ export class ResultsController {
       context.stroke();
       context.fillStyle = muted;
       context.textAlign = "right";
-      context.fillText(
-        String(Math.round((maxCount * tick) / 3)),
-        padding.left - 6,
-        y,
-      );
+      const value = (axisMaximum * tick) / tickCount;
+      const label =
+        yAxis === "percent" ? `${Math.round(value)}%` : String(Math.round(value));
+      context.fillText(label, padding.left - 7, y);
     }
-    counts.forEach((count, index) => {
-      const slot = plotWidth / bins;
-      const barHeight = (count / maxCount) * plotHeight;
-      context.fillStyle = accent;
-      context.fillRect(
-        padding.left + index * slot + 2,
-        padding.top + plotHeight - barHeight,
-        Math.max(2, slot - 4),
-        barHeight,
-      );
+    const slot = plotWidth / histogram.bins.length;
+    histogram.bins.forEach((bin, index) => {
+      const barHeight = (yValues[index] / axisMaximum) * plotHeight;
+      const x = padding.left + index * slot + 2;
+      const y = padding.top + plotHeight - barHeight;
+      const width = Math.max(2, slot - 4);
+      const active = index === this.activeBinIndex;
+      context.fillStyle = active ? accentStrong : accent;
+      context.fillRect(x, y, width, barHeight);
+      context.strokeStyle = active ? accentStrong : borderStrong;
+      context.strokeRect(x + 0.5, y + 0.5, Math.max(0, width - 1), Math.max(0, barHeight - 1));
+      this.histogramGeometry.push({ index, x, y, width, height: barHeight });
+      if (slot >= 27 && bin.count > 0) {
+        context.fillStyle = text;
+        context.font = "600 10px sans-serif";
+        context.textAlign = "center";
+        context.textBaseline = "bottom";
+        const label =
+          yAxis === "percent"
+            ? `${bin.percent.toFixed(bin.percent < 10 ? 1 : 0)}%`
+            : String(bin.count);
+        context.fillText(label, x + width / 2, Math.max(12, y - 4));
+      }
     });
+
+    context.strokeStyle = borderStrong;
+    context.beginPath();
+    context.moveTo(padding.left + 0.5, padding.top);
+    context.lineTo(padding.left + 0.5, padding.top + plotHeight + 0.5);
+    context.lineTo(padding.left + plotWidth, padding.top + plotHeight + 0.5);
+    context.stroke();
+
     context.fillStyle = muted;
     context.textBaseline = "top";
-    context.textAlign = "left";
+    context.font = "11px sans-serif";
+    const maxLabels = Math.max(2, Math.floor(plotWidth / 52));
+    const every = Math.max(1, Math.ceil(histogram.bins.length / maxLabels));
+    for (let index = 0; index <= histogram.bins.length; index += 1) {
+      if (index !== 0 && index !== histogram.bins.length && index % every) continue;
+      const value = histogram.lower + index * histogram.binWidth;
+      const x = padding.left + (index / histogram.bins.length) * plotWidth;
+      context.textAlign =
+        index === 0 ? "left" : index === histogram.bins.length ? "right" : "center";
+      context.fillText(
+        formatBinNumber(value, histogram.binWidth),
+        x,
+        padding.top + plotHeight + 9,
+      );
+    }
+    context.textAlign = "center";
     context.fillText(
-      min.toFixed(1),
-      padding.left,
-      padding.top + plotHeight + 9,
+      "管径 (nm)",
+      padding.left + plotWidth / 2,
+      padding.top + plotHeight + 26,
     );
-    context.textAlign = "right";
-    context.fillText(
-      max.toFixed(1),
-      padding.left + plotWidth,
-      padding.top + plotHeight + 9,
+
+    this.chart.setAttribute(
+      "aria-label",
+      `CNT 管径分布直方图，${histogram.values.length} 根，${histogram.bins.length} 个区间；可用左右方向键查看各区间。`,
     );
-    $("#chart-range").textContent = `${min.toFixed(1)}–${max.toFixed(1)} nm`;
-    $("#chart-caption").textContent =
-      `${values.length} 条纳入统计的测量，${bins} 个区间。`;
+    if (this.activeBinIndex >= 0) this.showChartTooltip(this.activeBinIndex);
+  }
+
+  renderHistogramSummary(histogram) {
+    const summary = histogram.summary;
+    const scope = $("#chart-scope").value;
+    const scopeLabel = scope === "batch" ? "整批文件夹" : "当前图片";
+    $("#chart-sample-size").textContent = `N = ${summary.count}`;
+    if (!summary.count) {
+      $("#chart-summary").hidden = true;
+      return;
+    }
+    $("#chart-summary").hidden = false;
+    $("#chart-median").textContent = `${this.metric(summary.median)} nm`;
+    $("#chart-quartiles").textContent =
+      `${this.metric(summary.q1)}–${this.metric(summary.q3)} nm`;
+    $("#chart-sample-std").textContent = `${this.metric(summary.sampleStd)} nm`;
+    $("#chart-cv").textContent = `${this.metric(summary.cvPercent)}%`;
+    $("#chart-range").textContent =
+      `${this.metric(summary.min)}–${this.metric(summary.max)} nm`;
+    const width = formatBinNumber(histogram.binWidth, histogram.binWidth);
+    const notes = [
+      `${scopeLabel}共 ${summary.count} 根 CNT，归入 ${histogram.bins.length} 个连续区间`,
+      `${histogramMethodLabel(histogram.method)}，区间宽度 ${width} nm`,
+    ];
+    if (summary.count < 5) notes.push("样本少于 5 根，分布形状仅供参考");
+    if (histogram.adjusted) notes.push("输入参数会产生过多区间，已限制为最多 20 档");
+    $("#chart-caption").textContent = `${notes.join("；")}。`;
+  }
+
+  renderBinTable(histogram) {
+    const tbody = $("#chart-bin-tbody");
+    tbody.replaceChildren();
+    if (!histogram.bins.length) {
+      const row = document.createElement("tr");
+      row.className = "empty-row";
+      const cell = document.createElement("td");
+      cell.colSpan = 3;
+      cell.textContent = "暂无统计数据";
+      row.appendChild(cell);
+      tbody.appendChild(row);
+      return;
+    }
+    const fragment = document.createDocumentFragment();
+    histogram.bins.forEach((bin) => {
+      const row = document.createElement("tr");
+      row.dataset.binIndex = String(bin.index);
+      row.classList.toggle("is-active", bin.index === this.activeBinIndex);
+      const interval = document.createElement("td");
+      interval.textContent = `${bin.interval} nm`;
+      const count = document.createElement("td");
+      count.textContent = String(bin.count);
+      const percent = document.createElement("td");
+      percent.textContent = `${bin.percent.toFixed(1)}%`;
+      row.append(interval, count, percent);
+      fragment.appendChild(row);
+    });
+    tbody.appendChild(fragment);
+  }
+
+  onChartPointerMove(event) {
+    if (!this.histogram?.bins.length) return;
+    const rect = this.chart.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+    const geometry = this.histogramGeometry.find(
+      (bar) =>
+        x >= bar.x &&
+        x <= bar.x + bar.width &&
+        y >= bar.y &&
+        y <= bar.y + Math.max(bar.height, 8),
+    );
+    const index = geometry?.index ?? -1;
+    if (index === this.activeBinIndex) return;
+    this.activeBinIndex = index;
+    if (index < 0) this.hideChartTooltip();
+    this.requestHistogram();
+  }
+
+  onChartKeydown(event) {
+    if (!this.histogram?.bins.length) return;
+    let index = this.activeBinIndex;
+    if (event.key === "ArrowRight") index = Math.min(this.histogram.bins.length - 1, index + 1);
+    else if (event.key === "ArrowLeft") index = Math.max(0, index < 0 ? 0 : index - 1);
+    else if (event.key === "Home") index = 0;
+    else if (event.key === "End") index = this.histogram.bins.length - 1;
+    else if (event.key === "Escape") index = -1;
+    else return;
+    event.preventDefault();
+    this.activeBinIndex = index;
+    if (index < 0) this.hideChartTooltip();
+    this.requestHistogram();
+  }
+
+  showChartTooltip(index) {
+    const bin = this.histogram?.bins[index];
+    const geometry = this.histogramGeometry[index];
+    if (!bin || !geometry) return;
+    const tooltip = $("#chart-tooltip");
+    const strong = document.createElement("strong");
+    strong.textContent = `${bin.interval} nm`;
+    const detail = document.createElement("span");
+    detail.textContent = `${bin.count} 根 · ${bin.percent.toFixed(1)}%`;
+    tooltip.replaceChildren(strong, detail);
+    const rect = this.chart.getBoundingClientRect();
+    tooltip.style.left = `${Math.min(rect.width - 72, Math.max(72, geometry.x + geometry.width / 2))}px`;
+    tooltip.style.top = `${Math.max(48, geometry.y - 2)}px`;
+    tooltip.hidden = false;
+  }
+
+  hideChartTooltip() {
+    $("#chart-tooltip").hidden = true;
+    $("#chart-bin-tbody")
+      .querySelectorAll("tr.is-active")
+      .forEach((row) => row.classList.remove("is-active"));
   }
 
   methodName(measurement) {

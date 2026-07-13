@@ -4,12 +4,20 @@ import { $ } from "../ui/dom.js";
 const ACTIVE = new Set(["queued", "running", "cancelling"]);
 
 export class AnalysisController {
-  constructor({ store, api, toast, applySnapshot, refresh }) {
+  constructor({
+    store,
+    api,
+    toast,
+    applySnapshot,
+    refresh,
+    onSettled = () => {},
+  }) {
     this.store = store;
     this.api = api;
     this.toast = toast;
     this.applySnapshot = applySnapshot;
     this.refresh = refresh;
+    this.onSettled = /** @type {(task:any) => unknown} */ (onSettled);
     this.pollTimer = 0;
     this.pollGeneration = 0;
 
@@ -60,9 +68,11 @@ export class AnalysisController {
       await this.applySnapshot(snapshot, { loadImage: false });
       this.toast.show("分析任务已开始。");
       this.resume(task.task_id);
+      return task;
     } catch (error) {
       this.toast.show(error.message || "无法启动分析。", "error");
       await this.refresh().catch(() => {});
+      return null;
     }
   }
 
@@ -99,6 +109,9 @@ export class AnalysisController {
           await this.refresh();
           this.toast.show(task.error?.message || "分析失败。", "error");
         }
+        await Promise.resolve(this.onSettled(task)).catch((error) => {
+          this.toast.show(error.message || "批处理状态更新失败。", "error");
+        });
       } catch (error) {
         if (generation !== this.pollGeneration) return;
         this.toast.show(error.message || "读取分析状态失败。", "error");

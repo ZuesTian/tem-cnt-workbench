@@ -15,6 +15,14 @@ export const initialState = Object.freeze({
   boxes: [],
   classNames: {},
   selectedMeasurementId: null,
+  batch: {
+    active: false,
+    batchId: "",
+    folderName: "",
+    currentIndex: -1,
+    items: [],
+    measurements: [],
+  },
   ui: {
     page: 1,
     pageSize: 100,
@@ -59,6 +67,8 @@ export function reducer(state, action) {
       };
     case "SELECT_MEASUREMENT":
       return { ...state, selectedMeasurementId: action.payload };
+    case "BATCH_RECEIVED":
+      return { ...state, batch: action.payload };
     case "UI_PATCH":
       return { ...state, ui: { ...state.ui, ...action.payload } };
     case "RESET_IMAGE_STATE":
