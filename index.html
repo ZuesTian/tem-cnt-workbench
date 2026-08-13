@@ -6,18 +6,21 @@
       name="viewport"
       content="width=device-width, initial-scale=1, viewport-fit=cover"
     />
-    <meta name="color-scheme" content="light" />
+    <meta name="theme-color" content="#f3f5f0" />
+    <meta name="color-scheme" content="light dark" />
     <meta
       name="description"
       content="TEM 碳纳米管检测、测量与可复现导出工作台"
     />
     <title>TEM CNT Analyzer · 科研分析工作台</title>
+    <script src="./static/js/theme.js?v=20260813"></script>
     <link rel="stylesheet" href="./static/css/tokens.css" />
     <link rel="stylesheet" href="./static/css/base.css" />
     <link rel="stylesheet" href="./static/css/layout.css" />
     <link rel="stylesheet" href="./static/css/components.css" />
     <link rel="stylesheet" href="./static/css/viewer.css" />
     <link rel="stylesheet" href="./static/css/responsive.css" />
+    <link rel="stylesheet" href="./static/css/theme.css?v=20260813" />
   </head>
   <body>
     <div id="app-shell" class="app-shell">
@@ -36,6 +39,10 @@
         </div>
 
         <div class="header-actions">
+          <a class="button button-quiet portal-link" href="https://zuestian.github.io/Cnanotools/">工具总览</a>
+          <button class="button button-quiet theme-toggle" type="button" data-theme-toggle>
+            <span data-theme-icon aria-hidden="true">☾</span><span data-theme-label>深色</span>
+          </button>
           <button
             id="btn-report"
             class="button button-quiet"
