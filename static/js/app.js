@@ -4,7 +4,7 @@ import { ApiClient } from "./api/client.js";
 import { AnalysisController } from "./features/analysis.js";
 import { BatchController } from "./features/batch.js";
 import { ResultsController } from "./features/results.js";
-import { WorkflowController } from "./features/workflow.js";
+import { WorkflowController } from "./features/workflow.js?v=20260814-paste";
 import { createStore, initialState } from "./state/store.js";
 import { Dialog } from "./ui/dialog.js";
 import { $ } from "./ui/dom.js";

@@ -40,6 +40,8 @@ export class WorkflowController {
       this.fileInput.value = "";
     });
     this.setupDropZone();
+    this.onClipboardPaste = (event) => this.handleClipboardPaste(event);
+    document.addEventListener("paste", this.onClipboardPaste);
 
     $("#btn-auto-scale").addEventListener("click", () => this.autoScale());
     $("#btn-apply-scale").addEventListener("click", () => this.applyScale());
@@ -105,6 +107,54 @@ export class WorkflowController {
       const file = event.dataTransfer?.files?.[0];
       if (file) this.upload(file);
     });
+  }
+
+  async handleClipboardPaste(event) {
+    const target = event.target;
+    if (
+      target instanceof HTMLElement &&
+      (target.matches("input, textarea, select") || target.isContentEditable)
+    ) {
+      return;
+    }
+    const clipboard = event.clipboardData;
+    if (!clipboard) return;
+    const files = [...clipboard.files];
+    for (const item of clipboard.items || []) {
+      if (item.kind === "file") {
+        const file = item.getAsFile();
+        if (file && !files.includes(file)) files.push(file);
+      }
+    }
+    const image = files.find((file) => file.type.startsWith("image/"));
+    if (!image) {
+      if (clipboard.items.length) {
+        this.toast.show("剪贴板中没有可用的 PNG、JPG、TIFF 或 BMP 图像。", "warning");
+      }
+      return;
+    }
+    const extensionByType = {
+      "image/png": "png",
+      "image/jpeg": "jpg",
+      "image/tiff": "tiff",
+      "image/bmp": "bmp",
+    };
+    const extension = extensionByType[image.type.toLowerCase()];
+    if (!extension) {
+      this.toast.show("剪贴板图像格式不受支持；请粘贴 PNG、JPG、TIFF 或 BMP。", "warning");
+      return;
+    }
+    event.preventDefault();
+    if (this.isActive()) {
+      this.toast.show("分析进行中，请先取消或等待完成。", "warning");
+      return;
+    }
+    const file = new File(
+      [image],
+      `clipboard-${new Date().toISOString().replace(/[:.]/g, "-")}.${extension}`,
+      { type: image.type, lastModified: Date.now() },
+    );
+    await this.upload(file);
   }
 
   async upload(file) {
@@ -364,6 +414,7 @@ export class WorkflowController {
 
   destroy() {
     if (this.scaleOverlayTimer) window.clearTimeout(this.scaleOverlayTimer);
+    document.removeEventListener("paste", this.onClipboardPaste);
   }
 
   setUploadLimit(bytes) {
