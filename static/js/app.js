@@ -4,7 +4,7 @@ import { ApiClient } from "./api/client.js";
 import { AnalysisController } from "./features/analysis.js";
 import { BatchController } from "./features/batch.js";
 import { ResultsController } from "./features/results.js";
-import { WorkflowController } from "./features/workflow.js?v=20260814-paste";
+import { WorkflowController } from "./features/workflow.js?v=20261125";
 import { createStore, initialState } from "./state/store.js";
 import { Dialog } from "./ui/dialog.js";
 import { $ } from "./ui/dom.js";
@@ -161,6 +161,7 @@ batch = new BatchController({
   refresh,
 });
 workspaceRenderer = new WorkspaceRenderer({ viewer, workflow });
+document.addEventListener("cntlab:themechange", () => results.renderHistogram());
 
 store.subscribe((state) => {
   workspaceRenderer.render(state);
@@ -240,7 +241,7 @@ function setupShellInteractions() {
       workflow.openFilePicker();
       return;
     }
-    if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "z") {
+    if ((event.ctrlKey || event.metaKey) && !editing && !event.target?.isContentEditable && event.key.toLowerCase() === "z") {
       event.preventDefault();
       if (!$("#btn-undo").disabled) $("#btn-undo").click();
       return;

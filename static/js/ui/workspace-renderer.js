@@ -127,6 +127,7 @@ export class WorkspaceRenderer {
       $(selector).disabled =
         unavailable ||
         blockedByBatch ||
+        (document.body.classList.contains("is-public-mode") && ["#model-path", "#enable-tta"].includes(selector)) ||
         (!image && !selector.includes("open"));
     });
     $("#btn-run-yolo").disabled = unavailable || !image || !scaleSet;

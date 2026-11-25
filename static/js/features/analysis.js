@@ -79,10 +79,13 @@ export class AnalysisController {
   resume(taskId) {
     this.stopPolling();
     const generation = ++this.pollGeneration;
+    let failures = 0;
     const poll = async () => {
       if (generation !== this.pollGeneration) return;
       try {
         const task = await this.api.getTask(taskId);
+        if (generation !== this.pollGeneration) return;
+        failures = 0;
         this.store.dispatch({ type: "TASK_RECEIVED", payload: task });
         if (ACTIVE.has(task.state)) {
           this.pollTimer = window.setTimeout(poll, 700);
@@ -114,8 +117,11 @@ export class AnalysisController {
         });
       } catch (error) {
         if (generation !== this.pollGeneration) return;
-        this.toast.show(error.message || "读取分析状态失败。", "error");
-        this.pollTimer = window.setTimeout(poll, 1600);
+        if (++failures >= 5) {
+          this.toast.show("连续五次未能读取任务状态，请刷新页面以恢复查询。", "error");
+          return;
+        }
+        this.pollTimer = window.setTimeout(poll, 800 * failures);
       }
     };
     poll();

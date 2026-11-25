@@ -69,7 +69,7 @@
   }
   .brand-copy small,
   .header-session,
-  .header-actions .button:not(#btn-open) {
+  .header-actions .button:not(#btn-open):not(.portal-link):not(.theme-toggle):not(#btn-export-csv) {
     display: none;
   }
   .brand-mark {

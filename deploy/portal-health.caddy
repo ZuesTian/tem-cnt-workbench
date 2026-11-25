@@ -1,0 +1,5 @@
+# Import inside the existing site block. Health follows the real backend.
+@portal_health path /health
+header @portal_health >Access-Control-Allow-Origin https://zuestian.github.io
+header @portal_health Cache-Control no-store
+rewrite @portal_health /api/health

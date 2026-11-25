@@ -73,9 +73,11 @@ export class BatchStorage {
 
   async clearBatch() {
     this.memoryBatch = null;
+    this.memoryArtifacts.clear();
     const database = await this.database();
     if (!database) return;
-    const transaction = database.transaction("batches", "readwrite");
+    const transaction = database.transaction(["batches", "artifacts"], "readwrite");
+    transaction.objectStore("artifacts").clear();
     transaction.objectStore("batches").delete("active");
     await transactionDone(transaction);
   }
