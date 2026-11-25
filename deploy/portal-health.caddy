@@ -3,3 +3,7 @@
 header @portal_health >Access-Control-Allow-Origin https://zuestian.github.io
 header @portal_health Cache-Control no-store
 rewrite @portal_health /api/health
+
+handle /api/usage/record {
+	reverse_proxy 127.0.0.1:8782
+}
